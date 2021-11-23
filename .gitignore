@@ -54,3 +54,4 @@ dkms.conf
 server/build
 server/bin
 .DS_Store
+.idea
