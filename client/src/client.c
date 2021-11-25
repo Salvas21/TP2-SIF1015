@@ -7,9 +7,12 @@ int main()
 {
     //init the screen
     initScreen();
-    initColors();
 
+    //init color
+    initColors();
     init_pair(1, COLOR_GREEN, COLOR_BLACK);
+    init_pair(2, COLOR_RED, COLOR_BLACK);
+    init_pair(3, COLOR_BLUE, COLOR_BLACK);
 
     //init window sizes
     int height, width, start_y, start_x;
@@ -21,11 +24,12 @@ int main()
     char command[80];
     char clientInput = 0;
     int commandLine = 0;
+    int secret = 0;
 
     //init thread
     pthread_t tid;
 
-    //creating client window and waitin ENTER to start
+    //creating client window and waiting ENTER to start
     WINDOW * clientWindow = createWindow(height, width, start_y, start_x, "PRESS ENTER TO START");
     while (clientInput != 10)
     {
@@ -67,9 +71,14 @@ int main()
             mvwprintw(clientWindow, commandLine, 1, "You Entered:");
 
             //add color to the command word
-            wattron(clientWindow,COLOR_PAIR(1));
-            mvwprintw(clientWindow, commandLine, 14,"%s",command);
-            wattroff(clientWindow,COLOR_PAIR(1));
+            if (secret == 1) {
+                writeRainbowText(clientWindow,command, commandLine)
+            }
+            else
+            {
+                writeCommandOnWindow(clientWindow,command, commandLine);
+            }
+
             wrefresh(clientWindow);
 
             //end program and thread when input is quit
@@ -77,6 +86,15 @@ int main()
             {
                 pthread_cancel(tid);
                 break;
+            }
+
+            if (strcmp(command, "uuddlrlrba") == 0)
+            {
+                commandLine += 1;
+                secret = 1;
+                char konami[20] = "KONAMI CODE UNLOCK";
+                writeRainbowText(clientWindow,konami, commandLine);
+                wrefresh(clientWindow);
             }
 
             //resetting input window and variable
@@ -124,6 +142,29 @@ void initColors()
     start_color();
 }
 
+void writeCommandOnWindow(WINDOW *window, const char * text_char, int commandLine)
+{
+    wattron(window,COLOR_PAIR(1));
+    mvwprintw(window, commandLine, 14,"%s",text_char);
+    wattroff(window,COLOR_PAIR(1));
+}
+
+void writeRainbowText(WINDOW *window, const char * text_char, int commandLine)
+{
+    int color = 1;
+    for (int i = 1; i <strlen(text_char)+1; ++i) {
+        if (color > 3)
+        {
+            color = 1;
+        }
+        wattron(window,COLOR_PAIR(color));
+        mvwprintw(window, commandLine, 13+i,"%c",text_char[i-1]);
+        wattroff(window,COLOR_PAIR(color));
+        color += 1;
+
+    }
+}
+
 char *appendChar(char *szString, size_t strsize, char c)
 {
     size_t len = strlen(szString);
@@ -165,7 +206,6 @@ void *serverWindowThread(WINDOW * window)
         mvwprintw(window,i+1,1,serverResponse);
         wrefresh(window);
     }
-
 
     pthread_exit(NULL);
 }

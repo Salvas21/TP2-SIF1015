@@ -15,6 +15,8 @@
 char *appendChar(char *szString, size_t strsize, char c);
 void initScreen();
 void initColors();
+void writeCommandOnWindow(WINDOW *window, const char * text_char, int commandLine);
+void writeRainbowText(WINDOW *window, const char * text_char, int commandLine);
 WINDOW *createWindow(int height, int width, int position_y, int position_x, const char * text_window);
 void clearWindow(WINDOW *window, const char * text_window);
 void *serverWindowThread(WINDOW * window);
