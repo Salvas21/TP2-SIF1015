@@ -10,8 +10,11 @@
 
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/termios.h>
 #include <sys/mman.h>
+
+#define SERVER_FIFO_NAME "/tmp/FIFO_TRANSACTIONS"
 
 /* Registers */
 enum

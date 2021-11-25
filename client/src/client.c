@@ -5,8 +5,16 @@
 
 int main()
 {
+
     //init the screen
     initScreen();
+    int server_fifo_fd;
+    server_fifo_fd = open(SERVER_FIFO_NAME, O_WRONLY | O_NONBLOCK);
+    printw("%d", server_fifo_fd);
+    if (server_fifo_fd == -1) {
+        printw("Server Fifo Failure\n");
+        exit(EXIT_FAILURE);
+    }
 
     //init color
     initColors();

@@ -4,12 +4,18 @@
 
 #ifndef TP2_SIF1015_CLIENT_H
 #define TP2_SIF1015_CLIENT_H
+#define SERVER_FIFO_NAME "/tmp/FIFO_TRANSACTIONS"
 
 #include <ncurses.h>
 #include <string.h>
 #include <pthread.h>
+#include <stdio.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 
 char *appendChar(char *szString, size_t strsize, char c);

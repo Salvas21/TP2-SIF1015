@@ -35,6 +35,11 @@ struct paramL{
 	int nend;
 	};
 
+struct info_FIFO_Transaction{
+    int pid_client;
+    char transaction[200];
+};
+
 
 
 void cls(void);
@@ -52,4 +57,4 @@ void saveItems(const char* sourcefname);
 //la structure paramX pour le passage des parametres au thread executeFile()
 void executeFile(struct paramX* param);
 
-void* readTrans(char* nomFichier);
+void* readTrans();
