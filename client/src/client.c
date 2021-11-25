@@ -72,7 +72,7 @@ int main()
 
             //add color to the command word
             if (secret == 1) {
-                writeRainbowText(clientWindow,command, commandLine)
+                writeRainbowText(clientWindow,command, commandLine);
             }
             else
             {
