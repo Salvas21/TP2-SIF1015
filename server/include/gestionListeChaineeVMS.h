@@ -5,7 +5,10 @@
 #include <pthread.h>
 #include <unistd.h>
 
-struct infoVM{						
+#include <fcntl.h>
+#include <sys/stat.h>
+
+struct infoVM{
 	int		noVM;
 	unsigned char 	busy; 
 	unsigned short * 	ptrDebutVM;							
@@ -58,3 +61,5 @@ void saveItems(const char* sourcefname);
 void executeFile(struct paramX* param);
 
 void* readTrans();
+
+void writeFifo(char* text);

@@ -15,26 +15,12 @@
 #include "../include/gestionListeChaineeVMS.h"
 #include "../include/gestionVMS.h"
 
-//Pointeur de tête de liste
 extern struct noeudVM* head;
-//Pointeur de queue de liste pour ajout rapide
 extern struct noeudVM* queue;
-// nombre de VM actives
 extern int nbVM;
-// nombre de threads actifs
 extern int nbThreadAELX;
-
-//semaphores pour pointeur de tete et pointeur de queue, nbVM, nbThreadALX et la console
-
 extern sem_t semH, semQ, semnbVM, semC, semnbThreadAELX;
 
-//#######################################
-//# Recherche un item dans la liste chaînée
-//# ENTREE: Numéro de la ligne
-//# RETOUR:	Un pointeur vers l'item recherché		
-//# 		Retourne NULL dans le cas où l'item
-//#			est introuvable
-//#
 struct noeudVM * findItem(const int no){
 	
 	//La liste est vide 
@@ -90,13 +76,6 @@ struct noeudVM * findItem(const int no){
 	return NULL;
 }
 
-//#######################################
-//#
-//# Recherche le PRÉDÉCESSEUR d'un item dans la liste chaînée
-//# ENTREE: Numéro de la ligne a supprimer
-//# RETOUR:	Le pointeur vers le prédécesseur est retourné		
-//# 		Retourne NULL dans le cas où l'item est introuvable
-//#
 struct noeudVM * findPrev(const int no){
 	
 	//La liste est vide 
@@ -154,14 +133,13 @@ struct noeudVM * findPrev(const int no){
 	return NULL;
 	}
 
-//#####################################################
-//# Ajoute un item a la fin de la liste chaînée de VM
-//# ENTREE: 
-//#	RETOUR:  
 void addItem(void * param){
 	sem_wait(&semnbThreadAELX);
-	    nbThreadAELX++;
+    nbThreadAELX++;
 	sem_post(&semnbThreadAELX);
+
+    char temp[400] = "";
+    char msg[400] = "";
 	
 	//Création de l'enregistrement en mémoire
 	struct noeudVM* ni = (struct noeudVM*)malloc(sizeof(struct noeudVM));
@@ -215,19 +193,23 @@ void addItem(void * param){
 	// deverrouiller pointeur de queue (avant)
 	sem_post(&semQ);
 	sem_wait(&semnbThreadAELX);
-	    nbThreadAELX--;
+    nbThreadAELX--;
 	sem_post(&semnbThreadAELX);
+
+    sprintf(temp, "Added vm\n");
+    strcat(msg, temp);
+    writeFifo(msg);
 }
 
-//#######################################
-//# Retire un item de la liste chaînée
-//# ENTREE: noVM: numéro du noeud a retirer 
 void removeItem(struct paramE* param){
 	int noVM = param->noVM;
 	free(param);
 	struct noeudVM * ptr;
 	struct noeudVM * tptr;
 	struct noeudVM * optr;
+
+    char msg[400] = "";
+    char temp[400] = "";
 	
 	 // Attendre la terminaison des threads A E L et X  
     while(1) 
@@ -319,94 +301,75 @@ void removeItem(struct paramE* param){
 	}
 	else {
 		sem_post(&semnbThreadAELX);
-	}	
+	}
+
+    sprintf(temp, "Removed vm %d\n", noVM);
+    strcat(msg, temp);
+    writeFifo(msg);
 }
 
-//#######################################
-//#
-//# Affiche les items dont le numéro séquentiel est compris dans une plage
-//#
 void listItems(struct paramL* param){
-	
 	int start = param->nstart;
 	int end = param->nend;
 	free(param);
 	sem_wait(&semnbThreadAELX);
-	    nbThreadAELX++;
+    nbThreadAELX++;
 	sem_post(&semnbThreadAELX);
-	//Verrouiller la console
-   sem_wait(&semC);
-   //Verrouiller le pointeur de tete
-   sem_wait(&semH);
-   
-	//Affichage des entêtes de colonnes
-	printf("noVM  Busy?		Adresse Debut VM                        \n");
-	printf("========================================================\n");
+    sem_wait(&semC);
+    sem_wait(&semH);
 
-	struct noeudVM * ptr = head;			//premier element
-	//Verrouiller le noeud de tete
+    char msg[400] = "";
+    char temp[400] = "";
+   
+	sprintf(temp, "noVM  Busy?		Adresse Debut VM                        \n");
+    strcat(msg, temp);
+	sprintf(temp, "========================================================\n");
+    strcat(msg, temp);
+
+	struct noeudVM * ptr = head;
 	sem_wait(&(ptr->semNoeud));
-	//Deverrouiller le pointeur de tete
 	sem_post(&semH);
 
 	while (ptr!=NULL){
-
-		//L'item a un numéro séquentiel dans l'interval défini
-		if ((ptr->VM.noVM>=start)&&(ptr->VM.noVM<=end)){
-			
-			printf("%d \t %d \t %p\n",
-				ptr->VM.noVM,
-				ptr->VM.busy, ptr->VM.ptrDebutVM);
-				
-			
-			}
-		if (ptr->VM.noVM>end){
-			//L'ensemble des items potentiels sont maintenant passés
-			//Déplacement immédiatement à la FIN de la liste
-			//Notez que le pointeur optr est toujours valide
+		if ((ptr->VM.noVM >= start) && (ptr->VM.noVM <= end)) {
+			sprintf(temp, "%d \t %d \t %p\n", ptr->VM.noVM, ptr->VM.busy, ptr->VM.ptrDebutVM);
+            strcat(msg, temp);
+        }
+		if (ptr->VM.noVM>end) {
 			ptr=NULL;
 			sem_post(&(ptr->semNoeud));
-			}
-		else{
+        } else {
 			struct noeudVM* optr = ptr;
 			if (ptr->suivant!=NULL) {
 				sem_wait(&(ptr->suivant->semNoeud));
 			}
 			ptr = ptr->suivant;
-			sem_post(&(optr->semNoeud)); 
-			
+			sem_post(&(optr->semNoeud));
 		}
-
 	}
+	sprintf(temp, "========================================================\n\n");
+    strcat(msg, temp);
 
-	//Affichage des pieds de colonnes
-	printf("========================================================\n\n");
-	
-	// Deverrouiller la console
-	sem_post(&semC);	
+    writeFifo(msg);
+
+	sem_post(&semC);
 	sem_wait(&semnbThreadAELX);
-	    nbThreadAELX--;
+    nbThreadAELX--;
 	sem_post(&semnbThreadAELX);
-			
-	}
+}
 
-
-//#######################################
-//#
-//# Execute le fichier de code .obj 
-//#
 void executeFile(struct paramX* param){
-	
-	// Obtenir sourcefname et noVM
-	char sourcefname[100]; 
+	char sourcefname[100];
 	int noVM;
+    char msg[400] = "";
+    char temp[400] = "";
 	
-	noVM = param ->noVM;
-	strcpy(sourcefname,(const char*)param->nomfich);
+	noVM = param->noVM;
+	strcpy(sourcefname, (const char*)param->nomfich);
 	free(param);
-	
+
 	sem_wait(&semnbThreadAELX);
-	    nbThreadAELX++;
+    nbThreadAELX++;
 	sem_post(&semnbThreadAELX);
 	
 /* Memory Storage */
@@ -424,7 +387,11 @@ void executeFile(struct paramX* param){
     if(ptr == NULL)
     {
         sem_wait(&semC);
-        printf("Virtual Machine unavailable\n");
+
+        sprintf(temp, "Virtual Machine unavailable\n");
+        strcat(msg, temp);
+        writeFifo(msg);
+
         sem_post(&semC);
         //return(0);
         pthread_exit(0);
@@ -434,7 +401,10 @@ void executeFile(struct paramX* param){
     if (!read_image_file(memory, sourcefname, &origin))
     {
         sem_wait(&semC);
-        printf("Failed to load image: %s\n", sourcefname);
+        sprintf(temp, "Failed to load image: %s\n", sourcefname);
+        strcat(msg, temp);
+        writeFifo(msg);
+
         sem_post(&semC);
         //return(0);
         // liberer le noeud verrouille
@@ -492,11 +462,10 @@ void executeFile(struct paramX* param){
                         uint16_t r2 = instr & 0x7;
                         reg[r0] = reg[r1] + reg[r2];
                     
-                        
- printf("\n add reg[r0] (sum) = %d", reg[r0]);
- //printf("\t add reg[r1] (sum avant) = %d", reg[r1]);
- //printf("\t add reg[r2] (valeur ajoutee) = %d", reg[r2]);
- 
+                        printf("\n add reg[r0] (sum) = %d", reg[r0]);
+                        strcat(msg, temp);
+                        //printf("\t add reg[r1] (sum avant) = %d", reg[r1]);
+                        //printf("\t add reg[r2] (valeur ajoutee) = %d", reg[r2]);
                     }
                 
                     update_flags(reg, r0);
@@ -708,7 +677,10 @@ void executeFile(struct paramX* param){
                         break;
                     case TRAP_HALT:
                         /* TRAP HALT */
-                        puts("\n HALT");
+//                        puts("\n HALT");
+                        sprintf(temp, "\n HALT");
+                        strcat(msg, temp);
+
                         fflush(stdout);
                         running = 0;
 
@@ -725,22 +697,31 @@ void executeFile(struct paramX* param){
                 break;
         }
     }
+    writeFifo(msg);
+
     ptr->VM.busy = 0;
-    /* Shutdown */
     restore_input_buffering();
-    //Liberer le noeud de la VM
     sem_post(&ptr->semNoeud);
-    // Deverrouiller la console
- 	 sem_post(&semC);
- 	 sem_wait(&semnbThreadAELX);
-	    nbThreadAELX--;
+    sem_post(&semC);
+    sem_wait(&semnbThreadAELX);
+    nbThreadAELX--;
 	sem_post(&semnbThreadAELX);
     pthread_exit(NULL);
 }
 
+void writeFifo(char* text) {
+    struct info_FIFO_Transaction transaction;
+    int fifo_transaction_fd, client_fifo_fd;
+    char client_fifo[100];
+    char message[400] = "";
 
-//#######################################
-//#
-//# fonction utilisée pour le traitement  des transactions
-//# ENTREE: Nom de fichier de transactions 
-//# SORTIE: 
+    fifo_transaction_fd = open("/tmp/FIFO_TRANSACTIONS", O_RDONLY);
+    read(fifo_transaction_fd, &transaction, sizeof(transaction));
+    sprintf(client_fifo, "/tmp/FIFO%d", transaction.pid_client);
+    client_fifo_fd = open(client_fifo, O_WRONLY);
+
+    strcpy(message, text);
+
+    write(client_fifo_fd, message, strlen(message)+1);
+    close(client_fifo_fd);
+}
