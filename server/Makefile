@@ -15,6 +15,7 @@ INC := -I include
 $(TARGET): $(OBJECTS)
 	@mkdir -p $(BINDIR)
 	@echo " $(CC) $^ -o $(TARGET) $(LIB)"; $(CC) $^ -o $(TARGET) $(LIB)
+	@cp -f *.olc3 $(BINDIR)
 
 $(BUILDDIR)/%.o: $(SRCDIR)/%.$(SRCEXT)
 	@mkdir -p $(BUILDDIR)
