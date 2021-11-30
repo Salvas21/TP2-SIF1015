@@ -171,7 +171,6 @@ void* readTrans(){
 //    printf("YAY!\n");
     server_fifo_fd = open(SERVER_FIFO_NAME, O_RDONLY);
 //    server_fifo_fd = open(SERVER_FIFO_NAME, O_RDONLY | O_NONBLOCK);
-    printf("YAY!\n");
     if (server_fifo_fd == -1) {
         fprintf(stderr, "Server Fifo Failure\n");
         unlink(SERVER_FIFO_NAME);
@@ -187,14 +186,79 @@ void* readTrans(){
     int continueReading = 0;
     int read_res;
     struct info_FIFO_Transaction my_data;
+
+    char *tok, *sp;
     while(continueReading == 0) {
         read_res = read(server_fifo_fd, &my_data, sizeof(my_data));
         if (read_res > 0) {
-            printf("%d\n",my_data.pid_client);
-            printf("%s\n",my_data.transaction);
+//            printf("%d\n",my_data.pid_client);
+//            printf("%s\n",my_data.transaction);
+//            printf("%c\n",my_data.transaction[0]);
+            tok = strtok_r(my_data.transaction, " ", &sp);
+            switch(tok[0]){
+                case 'A':
+                case 'a':{
+                    printf("A: %d\n",my_data.pid_client);
+                    // Creer un thread pour addItem (Ajouter une VM)
+                    pthread_create(&tid[nbThread++], NULL, addItem, NULL);
+                    writeFifo("Added VM",my_data.pid_client);
+                    break;
+                }
+                case 'E':
+                case 'e':{
+                    printf("E: %d\n",my_data.pid_client);
+                    //Extraction du paramètre
+                    int noVM = atoi(strtok_r(NULL, " ", &sp));
+                    // Creer un thread pour removeItem (Supprimer une VM)
+
+                    //Creer une instance de la structure a passer listItems
+                    struct paramE *ptr = (struct paramE*) malloc(sizeof(struct paramE));
+                    ptr->noVM = noVM;
+                    ptr->pid = my_data.pid_client;
+                    pthread_create(&tid[nbThread++], NULL, removeItem, ptr);
+                    break;
+                }
+                case 'L':
+                case 'l':{
+                    printf("L: %d\n",my_data.pid_client);
+                    //Extraction des paramètres
+                    int nstart = atoi(strtok_r(NULL, "-", &sp));
+                    int nend = atoi(strtok_r(NULL, " ", &sp));
+
+                    //Creer une instance de la structure a passer listItems
+                    struct paramL *ptr = (struct paramL*) malloc(sizeof(struct paramL));
+                    ptr->nstart = nstart;
+                    ptr->nend = nend;
+                    ptr->pid = my_data.pid_client;
+
+                    // Creer un thread pour removeItem (Enlever une VM)
+                    pthread_create(&tid[nbThread++], NULL, listItems, ptr);
+
+                    break;
+                }
+                case 'X':
+                case 'x':{
+                    printf("X: %d\n",my_data.pid_client);
+                    //Appel de la fonction associée
+                    int noVM = atoi(strtok_r(NULL, " ", &sp));
+                    char *nomfich = strtok_r(NULL, "\n", &sp);
+
+                    //Creer une instance de la structure a passer pthread_create
+                    struct paramX *ptr = (struct paramX*) malloc(sizeof(struct paramX));
+                    ptr->noVM = noVM;
+                    ptr->pid = my_data.pid_client;
+                    strcpy(ptr->nomfich,(const char *)nomfich);
+
+                    //Creer un thread pour executer le code binaire du fichier nomFich sur la VM noVM
+                    pthread_create(&tid[nbThread++], NULL, executeFile, ptr);
+
+                    break;
+                }
+            }
         }
-        printf("HELLO");
-        continueReading = 1;
+       // printf("HELLO");
+       // continueReading = 1;
+        memset(&my_data,0, sizeof(my_data));
     }
 	
 ////	FILE *f;

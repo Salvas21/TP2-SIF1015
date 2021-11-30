@@ -23,15 +23,20 @@ struct info_FIFO_Transaction {
     char transaction[200];
 };
 
+int server_fifo_fd, client_fifo_fd;
+char client_fifo[256];
+
+WINDOW *serverWindow;
 
 char *appendChar(char *szString, size_t strsize, char c);
 void initScreen();
 void initColors();
 void writeCommandOnWindow(WINDOW *window, const char * text_char, int commandLine);
+void sendDataToFifo(const char * text_char);
 void writeRainbowText(WINDOW *window, const char * text_char, int commandLine);
 int executeCommand(WINDOW * window, const char * text_char, int commandLine);
 WINDOW *createWindow(int height, int width, int position_y, int position_x, const char * text_window);
 void clearWindow(WINDOW *window, const char * text_window);
-void *serverWindowThread(WINDOW * window);
+void *serverWindowThread();
 
 #endif //TP2_SIF1015_CLIENT_H

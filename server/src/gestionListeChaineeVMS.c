@@ -138,9 +138,6 @@ void addItem(void * param){
     nbThreadAELX++;
 	sem_post(&semnbThreadAELX);
 
-    char temp[400] = "";
-    char msg[400] = "";
-	
 	//Création de l'enregistrement en mémoire
 	struct noeudVM* ni = (struct noeudVM*)malloc(sizeof(struct noeudVM));
 //printf("\n noVM=%d busy=%d adr ni=%p", ni->VM.noVM, ni->VM.busy, ni);
@@ -160,9 +157,8 @@ void addItem(void * param){
 	
 	//verrouiller pointeur de tete et pointeur de queue
    sem_wait(&semH);
-   sem_wait(&semQ);	
-     
-   
+   sem_wait(&semQ);
+
 	if ((head == NULL) && (queue == NULL)){//liste vide
 		ni->suivant= NULL;
 		queue = head = ni;
@@ -170,7 +166,7 @@ void addItem(void * param){
 		sem_post(&semQ);
 		sem_post(&semH);
 		sem_wait(&semnbThreadAELX);
-	     nbThreadAELX--;
+        nbThreadAELX--;
 		sem_post(&semnbThreadAELX);
 	  pthread_exit(0);
 	}
@@ -195,14 +191,11 @@ void addItem(void * param){
 	sem_wait(&semnbThreadAELX);
     nbThreadAELX--;
 	sem_post(&semnbThreadAELX);
-
-    sprintf(temp, "Added vm\n");
-    strcat(msg, temp);
-    writeFifo(msg);
 }
 
 void removeItem(struct paramE* param){
 	int noVM = param->noVM;
+    int pid = param->pid;
 	free(param);
 	struct noeudVM * ptr;
 	struct noeudVM * tptr;
@@ -305,12 +298,13 @@ void removeItem(struct paramE* param){
 
     sprintf(temp, "Removed vm %d\n", noVM);
     strcat(msg, temp);
-    writeFifo(msg);
+    writeFifo(msg, pid);
 }
 
 void listItems(struct paramL* param){
 	int start = param->nstart;
 	int end = param->nend;
+    int pid = param->pid;
 	free(param);
 	sem_wait(&semnbThreadAELX);
     nbThreadAELX++;
@@ -321,9 +315,9 @@ void listItems(struct paramL* param){
     char msg[400] = "";
     char temp[400] = "";
    
-	sprintf(temp, "noVM  Busy?		Adresse Debut VM                        \n");
+	sprintf(temp, "noVM    Busy    Adresse Debut VM\n");
     strcat(msg, temp);
-	sprintf(temp, "========================================================\n");
+	sprintf(temp, "===================================\n");
     strcat(msg, temp);
 
 	struct noeudVM * ptr = head;
@@ -332,7 +326,7 @@ void listItems(struct paramL* param){
 
 	while (ptr!=NULL){
 		if ((ptr->VM.noVM >= start) && (ptr->VM.noVM <= end)) {
-			sprintf(temp, "%d \t %d \t %p\n", ptr->VM.noVM, ptr->VM.busy, ptr->VM.ptrDebutVM);
+			sprintf(temp, " %d        %d        %p\n", ptr->VM.noVM, ptr->VM.busy, ptr->VM.ptrDebutVM);
             strcat(msg, temp);
         }
 		if (ptr->VM.noVM>end) {
@@ -347,10 +341,10 @@ void listItems(struct paramL* param){
 			sem_post(&(optr->semNoeud));
 		}
 	}
-	sprintf(temp, "========================================================\n\n");
+	sprintf(temp, "===================================\n");
     strcat(msg, temp);
 
-    writeFifo(msg);
+    writeFifo(msg, pid);
 
 	sem_post(&semC);
 	sem_wait(&semnbThreadAELX);
@@ -359,13 +353,14 @@ void listItems(struct paramL* param){
 }
 
 void executeFile(struct paramX* param){
-	char sourcefname[100];
+	char sourcefname[100] = "./Mult-Numbers.olc3";
 	int noVM;
     char msg[400] = "";
     char temp[400] = "";
+    int pid = param->pid;
 	
 	noVM = param->noVM;
-	strcpy(sourcefname, (const char*)param->nomfich);
+//	strcpy(sourcefname, (const char*)param->nomfich);
 	free(param);
 
 	sem_wait(&semnbThreadAELX);
@@ -390,7 +385,7 @@ void executeFile(struct paramX* param){
 
         sprintf(temp, "Virtual Machine unavailable\n");
         strcat(msg, temp);
-        writeFifo(msg);
+        writeFifo(msg, pid);
 
         sem_post(&semC);
         //return(0);
@@ -403,7 +398,7 @@ void executeFile(struct paramX* param){
         sem_wait(&semC);
         sprintf(temp, "Failed to load image: %s\n", sourcefname);
         strcat(msg, temp);
-        writeFifo(msg);
+        writeFifo(msg, pid);
 
         sem_post(&semC);
         //return(0);
@@ -697,7 +692,7 @@ void executeFile(struct paramX* param){
                 break;
         }
     }
-    writeFifo(msg);
+    writeFifo(msg, pid);
 
     ptr->VM.busy = 0;
     restore_input_buffering();
@@ -709,19 +704,17 @@ void executeFile(struct paramX* param){
     pthread_exit(NULL);
 }
 
-void writeFifo(char* text) {
-    struct info_FIFO_Transaction transaction;
-    int fifo_transaction_fd, client_fifo_fd;
+void writeFifo(char* text, int pid) {
+    int client_fifo_fd;
     char client_fifo[100];
     char message[400] = "";
 
-    fifo_transaction_fd = open("/tmp/FIFO_TRANSACTIONS", O_RDONLY);
-    read(fifo_transaction_fd, &transaction, sizeof(transaction));
-    sprintf(client_fifo, "/tmp/FIFO%d", transaction.pid_client);
+    sprintf(client_fifo, "/tmp/FIFO%d", pid);
     client_fifo_fd = open(client_fifo, O_WRONLY);
 
     strcpy(message, text);
 
     write(client_fifo_fd, message, strlen(message)+1);
     close(client_fifo_fd);
+
 }

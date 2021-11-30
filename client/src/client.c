@@ -9,40 +9,12 @@ int main()
     //init the screen
     initScreen();
 
-    int server_fifo_fd, client_fifo_fd;
-    struct info_FIFO_Transaction my_data;
-    int time_to_send;
-    char client_fifo[256];
-
     server_fifo_fd = open(SERVER_FIFO_NAME, O_WRONLY | O_NONBLOCK);
-    printw("%d", server_fifo_fd);
     if (server_fifo_fd == -1) {
         printw("Server Fifo Failure\n");
         exit(EXIT_FAILURE);
     }
 
-    my_data.pid_client = getpid();
-    sprintf(client_fifo, CLIENT_FIFO_NAME, my_data.pid_client);
-    if (mkfifo(client_fifo,0777) == -1) {
-        printw("Cant make fifo %s\n",client_fifo);
-        exit(EXIT_FAILURE);
-    }
-
-    for (time_to_send = 0; time_to_send < 5; time_to_send++) {
-        sprintf(my_data.transaction, "Hello from %d", my_data.pid_client);
-        printw("%d sent %s, ",my_data.pid_client, my_data.transaction);
-        write(server_fifo_fd, &my_data, sizeof(my_data));
-        client_fifo_fd = open(client_fifo, O_RDONLY);
-        if (client_fifo_fd != -1) {
-            if (read(client_fifo_fd, &my_data, sizeof(my_data)) > 0) {
-                printw("received %s \n",my_data.transaction);
-            }
-            close(client_fifo_fd);
-        }
-    }
-
-    close(server_fifo_fd);
-    unlink(client_fifo);
 
     //init color
     initColors();
@@ -54,7 +26,7 @@ int main()
     int height, width, start_y, start_x;
     height = 25;
     width = 50;
-    start_y = start_x = 1;
+    start_y = start_x = 2;
 
     //init client&sever command input
     char command[80];
@@ -67,15 +39,11 @@ int main()
     pthread_t tid;
 
     //creating client window and waiting ENTER to start
-    WINDOW * clientWindow = createWindow(height, width, start_y, start_x, "PRESS ENTER TO START");
-    while (clientInput != 10)
-    {
-        clientInput = getch();
-    }
+    WINDOW * clientWindow = createWindow(height, width, start_y, start_x, "");
 
     //creating server window thread
-    WINDOW * serverWindow = createWindow(height, width, start_y, start_x + width, "Waiting...");
-    pthread_create(&tid, NULL, serverWindowThread, serverWindow);
+    serverWindow = createWindow(height, width, start_y, start_x + width, "Waiting...");
+    pthread_create(&tid, NULL, serverWindowThread, NULL);
 
     //resetting command array
     memset(command, 0, sizeof command);
@@ -83,12 +51,12 @@ int main()
     clearWindow(clientWindow,"");
 
     //creating input window with custom color
-    WINDOW * inputWindow = createWindow(3, width-3, height-3, start_x+1,"Command : ");
+    WINDOW * inputWindow = createWindow(3, width-3, height-2, start_x+1,"Command : ");
     wbkgd(inputWindow, COLOR_PAIR(1));
     wrefresh(inputWindow);
 
     //move cursor to inputWindow
-    move(height-2,start_x+12);
+    move(height-1,start_x+12);
 
     while (true) {
         clientInput = getch();
@@ -116,7 +84,6 @@ int main()
                 writeCommandOnWindow(clientWindow,command, commandLine);
             }
 
-            commandLine += 1;
             if (executeCommand(clientWindow, command, commandLine) == -1)
             {
                 mvwprintw(clientWindow, commandLine, 1,"%s","Invalid command!");
@@ -142,7 +109,7 @@ int main()
 
             //resetting input window and variable
             memset(command, 0, sizeof command);
-            move(height-2,start_x+12);
+            move(height-1,start_x+12);
 
             clearWindow(inputWindow, "Command : ");
         } else {
@@ -164,6 +131,9 @@ int main()
         }
     }
     //deallocate and end ncurses
+    close(server_fifo_fd);
+    close(client_fifo_fd);
+    unlink(client_fifo);
     endwin();
     pthread_exit(NULL);
 }
@@ -171,8 +141,13 @@ int main()
 void initScreen()
 {
     initscr();
-    noecho();
     cbreak();
+    move(1,20);
+    printw("Client");
+    move(1,72);
+    printw("Server");
+    move(27,35);
+    printw("Try if you dare : uuddlrlrba");
 }
 
 void initColors()
@@ -210,23 +185,32 @@ void writeRainbowText(WINDOW *window, const char * text_char, int commandLine)
 
 int executeCommand(WINDOW * window,const char * text_char, int commandLine)
 {
+
     switch (text_char[0])
     {
         case 'A':
-            mvwprintw(window, commandLine, 1,"%s","added...");
+            sendDataToFifo(text_char);
             return 0;
         case 'L':
-            mvwprintw(window, commandLine, 1,"%s","listed...");
+            sendDataToFifo(text_char);
             return 0;
         case 'X':
-            mvwprintw(window, commandLine, 1,"%s","executed...");
+            sendDataToFifo(text_char);
             return 0;
         case 'E':
-            mvwprintw(window, commandLine, 1,"%s","deleted...");
+            sendDataToFifo(text_char);
             return 0;
 
     }
     return -1;
+}
+
+void sendDataToFifo(const char * text_char)
+{
+    struct info_FIFO_Transaction my_data;
+    my_data.pid_client = getpid();
+    sprintf(my_data.transaction, "%s", text_char);
+    write(server_fifo_fd, &my_data, sizeof(my_data));
 }
 
 char *appendChar(char *szString, size_t strsize, char c)
@@ -252,24 +236,45 @@ WINDOW *createWindow(int height, int width, int position_y, int position_x, cons
 }
 void clearWindow(WINDOW *window, const char * text_window)
 {
-    wclear(window);
+    werase(window);
     box(window,0,0);
     mvwprintw(window,1,1,text_window);
     wrefresh(window);
 }
 
-void *serverWindowThread(WINDOW * window)
+void *serverWindowThread()
 {
-    wclear(window);
-    char serverResponse[100];
-
-    for (int i = 0; i < 10; ++i) {
-        sleep(2);
-        sprintf(serverResponse,"%d",rand());
-        box(window,0,0);
-        mvwprintw(window,i+1,1,serverResponse);
-        wrefresh(window);
+    sprintf(client_fifo, CLIENT_FIFO_NAME, getpid());
+    if (mkfifo(client_fifo,0777) == -1) {
+        printw("Cant make fifo %s\n",client_fifo);
+        exit(EXIT_FAILURE);
     }
+
+    werase(serverWindow);
+    client_fifo_fd = open(client_fifo, O_RDONLY);
+    char message[400] = "";
+    int i = 0;
+    int read_res;
+
+    while (1)
+    {
+        read_res = read(client_fifo_fd, message, 400);
+        if (read_res > 0) {
+            if (i > 20) {
+                i = 0;
+                werase(serverWindow);
+                box(serverWindow,0,0);
+                wrefresh(serverWindow);
+            }
+            mvwprintw(serverWindow,i+1,1,message);
+            i = getcury(serverWindow);
+            box(serverWindow,0,0);
+            wrefresh(serverWindow);
+        }
+        //memset(message, 0, sizeof message);
+    }
+    close(client_fifo_fd);
+    unlink(client_fifo);
 
     pthread_exit(NULL);
 }

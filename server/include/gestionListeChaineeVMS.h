@@ -25,17 +25,20 @@ struct noeudVM{
 struct paramX{
 	int noVM;
 	char nomfich[100];
+    int pid;
 	};
 	
 //la structure pour le passage des parametres au thread removeItem()
 struct paramE{
 	int noVM;
+    int pid;
 	};
 
 //la structure pour le passage des parametres au thread listItem()
 struct paramL{
 	int nstart;
 	int nend;
+    int pid;
 	};
 
 struct info_FIFO_Transaction{
@@ -62,4 +65,4 @@ void executeFile(struct paramX* param);
 
 void* readTrans();
 
-void writeFifo(char* text);
+void writeFifo(char* text, int pid);
