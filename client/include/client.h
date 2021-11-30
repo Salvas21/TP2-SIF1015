@@ -5,6 +5,7 @@
 #ifndef TP2_SIF1015_CLIENT_H
 #define TP2_SIF1015_CLIENT_H
 #define SERVER_FIFO_NAME "/tmp/FIFO_TRANSACTIONS"
+#define CLIENT_FIFO_NAME "/tmp/FIFO%d"
 
 #include <ncurses.h>
 #include <string.h>
@@ -17,12 +18,18 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+struct info_FIFO_Transaction {
+    pid_t pid_client;
+    char transaction[200];
+};
+
 
 char *appendChar(char *szString, size_t strsize, char c);
 void initScreen();
 void initColors();
 void writeCommandOnWindow(WINDOW *window, const char * text_char, int commandLine);
 void writeRainbowText(WINDOW *window, const char * text_char, int commandLine);
+int executeCommand(WINDOW * window, const char * text_char, int commandLine);
 WINDOW *createWindow(int height, int width, int position_y, int position_x, const char * text_window);
 void clearWindow(WINDOW *window, const char * text_window);
 void *serverWindowThread(WINDOW * window);

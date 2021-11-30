@@ -8,13 +8,41 @@ int main()
 
     //init the screen
     initScreen();
-    int server_fifo_fd;
+
+    int server_fifo_fd, client_fifo_fd;
+    struct info_FIFO_Transaction my_data;
+    int time_to_send;
+    char client_fifo[256];
+
     server_fifo_fd = open(SERVER_FIFO_NAME, O_WRONLY | O_NONBLOCK);
     printw("%d", server_fifo_fd);
     if (server_fifo_fd == -1) {
         printw("Server Fifo Failure\n");
         exit(EXIT_FAILURE);
     }
+
+    my_data.pid_client = getpid();
+    sprintf(client_fifo, CLIENT_FIFO_NAME, my_data.pid_client);
+    if (mkfifo(client_fifo,0777) == -1) {
+        printw("Cant make fifo %s\n",client_fifo);
+        exit(EXIT_FAILURE);
+    }
+
+    for (time_to_send = 0; time_to_send < 5; time_to_send++) {
+        sprintf(my_data.transaction, "Hello from %d", my_data.pid_client);
+        printw("%d sent %s, ",my_data.pid_client, my_data.transaction);
+        write(server_fifo_fd, &my_data, sizeof(my_data));
+        client_fifo_fd = open(client_fifo, O_RDONLY);
+        if (client_fifo_fd != -1) {
+            if (read(client_fifo_fd, &my_data, sizeof(my_data)) > 0) {
+                printw("received %s \n",my_data.transaction);
+            }
+            close(client_fifo_fd);
+        }
+    }
+
+    close(server_fifo_fd);
+    unlink(client_fifo);
 
     //init color
     initColors();
@@ -33,6 +61,7 @@ int main()
     char clientInput = 0;
     int commandLine = 0;
     int secret = 0;
+
 
     //init thread
     pthread_t tid;
@@ -85,6 +114,12 @@ int main()
             else
             {
                 writeCommandOnWindow(clientWindow,command, commandLine);
+            }
+
+            commandLine += 1;
+            if (executeCommand(clientWindow, command, commandLine) == -1)
+            {
+                mvwprintw(clientWindow, commandLine, 1,"%s","Invalid command!");
             }
 
             wrefresh(clientWindow);
@@ -171,6 +206,27 @@ void writeRainbowText(WINDOW *window, const char * text_char, int commandLine)
         color += 1;
 
     }
+}
+
+int executeCommand(WINDOW * window,const char * text_char, int commandLine)
+{
+    switch (text_char[0])
+    {
+        case 'A':
+            mvwprintw(window, commandLine, 1,"%s","added...");
+            return 0;
+        case 'L':
+            mvwprintw(window, commandLine, 1,"%s","listed...");
+            return 0;
+        case 'X':
+            mvwprintw(window, commandLine, 1,"%s","executed...");
+            return 0;
+        case 'E':
+            mvwprintw(window, commandLine, 1,"%s","deleted...");
+            return 0;
+
+    }
+    return -1;
 }
 
 char *appendChar(char *szString, size_t strsize, char c)
