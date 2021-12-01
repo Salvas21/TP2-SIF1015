@@ -188,15 +188,19 @@ int executeCommand(WINDOW * window,const char * text_char, int commandLine)
 
     switch (text_char[0])
     {
+        case 'a':
         case 'A':
             sendDataToFifo(text_char);
             return 0;
+        case 'l':
         case 'L':
             sendDataToFifo(text_char);
             return 0;
+        case 'x':
         case 'X':
             sendDataToFifo(text_char);
             return 0;
+        case 'e':
         case 'E':
             sendDataToFifo(text_char);
             return 0;

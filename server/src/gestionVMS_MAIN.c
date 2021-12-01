@@ -32,9 +32,6 @@ sem_t semH, semQ, semnbVM, semC, semnbThreadAELX;
 
 
 int main(int argc, char* argv[]){
-
-
-	//Initialisation des pointeurs
 	head = NULL;
 	queue = NULL;
 	nbVM = 0;
@@ -46,16 +43,11 @@ int main(int argc, char* argv[]){
 	sem_init(&semC, 0, 1);
 	sem_init(&semnbThreadAELX, 0, 1);
 	
-	//"Nettoyage" de la fenêtre console
-	//cls();
-
-    // create FIFO_TRANSACTIONS
     mkfifo(SERVER_FIFO_NAME, 0777);
 
     readTrans();
     unlink(SERVER_FIFO_NAME);
 
-    //Fin du programme
     exit(0);
 }
 

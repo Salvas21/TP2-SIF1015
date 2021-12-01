@@ -25,6 +25,6 @@ clean:
 	@echo " $(RM) -r $(BUILDDIR) $(TARGET) $(BINDIR)"; $(RM) -r $(BUILDDIR) $(TARGET) $(BINDIR)
 
 run:
-	$(TARGET) ./trans2.txt
+	$(TARGET)
 
 .PHONY: clean

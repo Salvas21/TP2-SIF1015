@@ -353,14 +353,14 @@ void listItems(struct paramL* param){
 }
 
 void executeFile(struct paramX* param){
-	char sourcefname[100] = "./Mult-Numbers.olc3";
+	char sourcefname[100];
 	int noVM;
     char msg[400] = "";
     char temp[400] = "";
     int pid = param->pid;
 	
 	noVM = param->noVM;
-//	strcpy(sourcefname, (const char*)param->nomfich);
+	strcpy(sourcefname, (const char*)param->nomfich);
 	free(param);
 
 	sem_wait(&semnbThreadAELX);
@@ -457,7 +457,7 @@ void executeFile(struct paramX* param){
                         uint16_t r2 = instr & 0x7;
                         reg[r0] = reg[r1] + reg[r2];
                     
-                        printf("\n add reg[r0] (sum) = %d", reg[r0]);
+                        sprintf(temp, " add reg[r0] (sum) = %d\n", reg[r0]);
                         strcat(msg, temp);
                         //printf("\t add reg[r1] (sum avant) = %d", reg[r1]);
                         //printf("\t add reg[r2] (valeur ajoutee) = %d", reg[r2]);
@@ -673,7 +673,7 @@ void executeFile(struct paramX* param){
                     case TRAP_HALT:
                         /* TRAP HALT */
 //                        puts("\n HALT");
-                        sprintf(temp, "\n HALT");
+                        sprintf(temp, " HALT\n");
                         strcat(msg, temp);
 
                         fflush(stdout);

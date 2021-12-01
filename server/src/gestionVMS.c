@@ -80,9 +80,9 @@ void update_flags(uint16_t reg[R_COUNT], uint16_t r)
 /* Read Image File */
 int read_image_file(uint16_t * memory, char* image_path,uint16_t * origin)
 {
-	 char fich[200];
-	 strncpy(fich, image_path, strlen(image_path)-1);
-  	 FILE* file = fopen(fich, "rb");
+    char fich[200];
+    strncpy(fich, image_path, strlen(image_path)+1);
+    FILE* file = fopen(fich, "rb");
 
     if (!file) { return 0; }
     /* the origin tells us where in memory to place the image */
@@ -165,20 +165,15 @@ void handle_interrupt(int signal)
 }
 
 
-void* readTrans(){
-    // FIFO
+void* readTrans() {
     int server_fifo_fd;
-//    printf("YAY!\n");
     server_fifo_fd = open(SERVER_FIFO_NAME, O_RDONLY);
-//    server_fifo_fd = open(SERVER_FIFO_NAME, O_RDONLY | O_NONBLOCK);
     if (server_fifo_fd == -1) {
         fprintf(stderr, "Server Fifo Failure\n");
         unlink(SERVER_FIFO_NAME);
         exit(EXIT_FAILURE);
     }
-//    printf("YAY!\n");
 
-	// Un compteur de thread et une liste de tid
 	pthread_t tid[1000];
 	int nbThread = 0;
 	int i;
@@ -191,27 +186,17 @@ void* readTrans(){
     while(continueReading == 0) {
         read_res = read(server_fifo_fd, &my_data, sizeof(my_data));
         if (read_res > 0) {
-//            printf("%d\n",my_data.pid_client);
-//            printf("%s\n",my_data.transaction);
-//            printf("%c\n",my_data.transaction[0]);
             tok = strtok_r(my_data.transaction, " ", &sp);
             switch(tok[0]){
                 case 'A':
                 case 'a':{
-                    printf("A: %d\n",my_data.pid_client);
-                    // Creer un thread pour addItem (Ajouter une VM)
                     pthread_create(&tid[nbThread++], NULL, addItem, NULL);
                     writeFifo("Added VM",my_data.pid_client);
                     break;
                 }
                 case 'E':
                 case 'e':{
-                    printf("E: %d\n",my_data.pid_client);
-                    //Extraction du paramètre
                     int noVM = atoi(strtok_r(NULL, " ", &sp));
-                    // Creer un thread pour removeItem (Supprimer une VM)
-
-                    //Creer une instance de la structure a passer listItems
                     struct paramE *ptr = (struct paramE*) malloc(sizeof(struct paramE));
                     ptr->noVM = noVM;
                     ptr->pid = my_data.pid_client;
@@ -220,134 +205,44 @@ void* readTrans(){
                 }
                 case 'L':
                 case 'l':{
-                    printf("L: %d\n",my_data.pid_client);
-                    //Extraction des paramètres
                     int nstart = atoi(strtok_r(NULL, "-", &sp));
                     int nend = atoi(strtok_r(NULL, " ", &sp));
 
-                    //Creer une instance de la structure a passer listItems
                     struct paramL *ptr = (struct paramL*) malloc(sizeof(struct paramL));
                     ptr->nstart = nstart;
                     ptr->nend = nend;
                     ptr->pid = my_data.pid_client;
 
-                    // Creer un thread pour removeItem (Enlever une VM)
                     pthread_create(&tid[nbThread++], NULL, listItems, ptr);
-
                     break;
                 }
                 case 'X':
                 case 'x':{
-                    printf("X: %d\n",my_data.pid_client);
-                    //Appel de la fonction associée
                     int noVM = atoi(strtok_r(NULL, " ", &sp));
                     char *nomfich = strtok_r(NULL, "\n", &sp);
 
-                    //Creer une instance de la structure a passer pthread_create
                     struct paramX *ptr = (struct paramX*) malloc(sizeof(struct paramX));
                     ptr->noVM = noVM;
                     ptr->pid = my_data.pid_client;
                     strcpy(ptr->nomfich,(const char *)nomfich);
 
-                    //Creer un thread pour executer le code binaire du fichier nomFich sur la VM noVM
                     pthread_create(&tid[nbThread++], NULL, executeFile, ptr);
-
                     break;
                 }
+//                case '€': {
+//                    continueReading = 1;
+//                    break;
+//                }
             }
         }
-       // printf("HELLO");
-       // continueReading = 1;
+//        continueReading = 1;
         memset(&my_data,0, sizeof(my_data));
     }
-	
-////	FILE *f;
-//	char buffer[100];
-//	char *tok, *sp;
-//
-////	Ouverture du fichier en mode "r" (equiv. "rt") : [r]ead [t]ext
-//	f = fopen(nomFichier, "rt");
-//	if (f==NULL)
-//		error(2, "readTrans: Erreur lors de l'ouverture du fichier.");
-//
-//	//Lecture (tentative) d'une ligne de texte
-//	fgets(buffer, 100, f);
-//
-//    // Read FIFO_TRANSACTIONS
-//	//Pour chacune des lignes lues
-//	while(!feof(f)){
-//
-//		sleep(1);
-//
-//        // get data structure for each transaction (PiD + action)
-//
-//		//Extraction du type de transaction
-//		tok = strtok_r(buffer, " ", &sp);
-//
-//		//Branchement selon le type de transaction
-//		switch(tok[0]){
-//			case 'A':
-//			case 'a':{
-//				// Creer un thread pour addItem (Ajouter une VM)
-//				pthread_create(&tid[nbThread++], NULL, addItem, NULL);
-//				break;
-//				}
-//			case 'E':
-//			case 'e':{
-//				//Extraction du paramètre
-//				int noVM = atoi(strtok_r(NULL, " ", &sp));
-//				// Creer un thread pour removeItem (Supprimer une VM)
-//
-//				//Creer une instance de la structure a passer listItems
-//				struct paramE *ptr = (struct paramE*) malloc(sizeof(struct paramE));
-//				ptr->noVM = noVM;
-//				pthread_create(&tid[nbThread++], NULL, removeItem, ptr);
-//				break;
-//				}
-//			case 'L':
-//			case 'l':{
-//				//Extraction des paramètres
-//				int nstart = atoi(strtok_r(NULL, "-", &sp));
-//				int nend = atoi(strtok_r(NULL, " ", &sp));
-//
-//				//Creer une instance de la structure a passer listItems
-//				struct paramL *ptr = (struct paramL*) malloc(sizeof(struct paramL));
-//				ptr->nstart = nstart;
-//				ptr->nend = nend;
-//
-//				// Creer un thread pour removeItem (Enlever une VM)
-//				pthread_create(&tid[nbThread++], NULL, listItems, ptr);
-//
-//				break;
-//				}
-//			case 'X':
-//			case 'x':{
-//				//Appel de la fonction associée
-//				int noVM = atoi(strtok_r(NULL, " ", &sp));
-//				char *nomfich = strtok_r(NULL, "\n", &sp);
-//
-//				//Creer une instance de la structure a passer pthread_create
-//				struct paramX *ptr = (struct paramX*) malloc(sizeof(struct paramX));
-//				ptr->noVM = noVM;
-//				strcpy(ptr->nomfich,(const char *)nomfich);
-//
-//				//Creer un thread pour executer le code binaire du fichier nomFich sur la VM noVM
-//				pthread_create(&tid[nbThread++], NULL, executeFile, ptr);
-//
-//				break;
-//				}
-//		}
-//		//Lecture (tentative) de la prochaine ligne de texte
-//		fgets(buffer, 100, f);
-//	}
-	//Attendre la fin de tous les transactions
+
 	for(i=0; i<nbThread;i++) {
 		pthread_join(tid[i], NULL);
 	}
     close(server_fifo_fd);
-	//Fermeture du fichier
-//	fclose(f);
-	//Retour
 	return NULL;
 }
 
