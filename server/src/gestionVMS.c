@@ -28,6 +28,8 @@ extern int nbThreadAELX;
 //Semaphores
 extern sem_t semH, semQ, semnbVM, semC, semnbThreadAELX;
 
+int continueReadingFifo = 1;
+
 //#######################################
 //#
 //# Affiche une série de retour de ligne pour "nettoyer" la console
@@ -164,6 +166,9 @@ void handle_interrupt(int signal)
     exit(-2);
 }
 
+void terminateReadingFifo() {
+    continueReadingFifo = 0;
+}
 
 void* readTrans() {
     int server_fifo_fd;
@@ -178,12 +183,13 @@ void* readTrans() {
 	int nbThread = 0;
 	int i;
 
-    int continueReading = 0;
     int read_res;
     struct info_FIFO_Transaction my_data;
 
+    signal(SIGINT, terminateReadingFifo);
+
     char *tok, *sp;
-    while(continueReading == 0) {
+    while(continueReadingFifo == 1) {
         read_res = read(server_fifo_fd, &my_data, sizeof(my_data));
         if (read_res > 0) {
             tok = strtok_r(my_data.transaction, " ", &sp);
@@ -229,13 +235,8 @@ void* readTrans() {
                     pthread_create(&tid[nbThread++], NULL, executeFile, ptr);
                     break;
                 }
-//                case '€': {
-//                    continueReading = 1;
-//                    break;
-//                }
             }
         }
-//        continueReading = 1;
         memset(&my_data,0, sizeof(my_data));
     }
 
